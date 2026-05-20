@@ -1,7 +1,7 @@
-import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
 
-const client = new Anthropic();
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
 
 const PROMPT = `Analyze this food image and return ONLY a JSON code block with this exact shape:
 
@@ -33,33 +33,19 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unsupported image type" }, { status: 400 });
     }
 
-    const response = await client.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1024,
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: mimeType as "image/jpeg" | "image/png" | "image/gif" | "image/webp",
-                data: imageBase64,
-              },
-            },
-            { type: "text", text: PROMPT },
-          ],
-        },
-      ],
-    });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    const text = response.content[0].type === "text" ? response.content[0].text : "";
+    const result = await model.generateContent([
+      { inlineData: { data: imageBase64, mimeType } },
+      PROMPT,
+    ]);
+
+    const text = result.response.text();
     const jsonMatch = text.match(/```json\n([\s\S]+?)\n```/);
     const jsonStr = jsonMatch ? jsonMatch[1] : text;
-    const result = JSON.parse(jsonStr);
+    const parsed = JSON.parse(jsonStr);
 
-    return NextResponse.json(result);
+    return NextResponse.json(parsed);
   } catch (err) {
     console.error("Analyze error:", err);
     return NextResponse.json({ error: "Failed to analyze image" }, { status: 500 });
