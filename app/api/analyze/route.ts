@@ -1,7 +1,6 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { NextRequest, NextResponse } from "next/server";
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
+const OLLAMA_URL = process.env.OLLAMA_URL ?? "http://localhost:11434";
 
 const PROMPT = `Analyze this food image and return ONLY a JSON code block with this exact shape:
 
@@ -18,7 +17,8 @@ const PROMPT = `Analyze this food image and return ONLY a JSON code block with t
 \`\`\`
 
 Confidence levels: "high" (clearly visible single item with known portion), "medium" (identifiable but portions unclear), "low" (multiple mixed items or poor lighting).
-If no food is detected, return totalCalories: 0, empty items array, and explain in notes.`;
+If no food is detected, return totalCalories: 0, empty items array, and explain in notes.
+Return ONLY the JSON code block, nothing else.`;
 
 export async function POST(req: NextRequest) {
   try {
@@ -33,16 +33,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Unsupported image type" }, { status: 400 });
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-lite" });
+    const ollamaRes = await fetch(`${OLLAMA_URL}/api/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: "llava",
+        prompt: PROMPT,
+        images: [imageBase64],
+        stream: false,
+      }),
+    }).catch(() => {
+      throw new Error("Cannot connect to Ollama. Make sure it is running: ollama serve");
+    });
 
-    const result = await model.generateContent([
-      { inlineData: { data: imageBase64, mimeType } },
-      PROMPT,
-    ]);
+    if (!ollamaRes.ok) {
+      const body = await ollamaRes.text();
+      throw new Error(`Ollama error ${ollamaRes.status}: ${body}`);
+    }
 
-    const text = result.response.text();
+    const data = await ollamaRes.json();
+    const text: string = data.response ?? "";
+
     const jsonMatch = text.match(/```json\n([\s\S]+?)\n```/);
-    const jsonStr = jsonMatch ? jsonMatch[1] : text;
+    const jsonStr = jsonMatch ? jsonMatch[1] : text.trim();
     const parsed = JSON.parse(jsonStr);
 
     return NextResponse.json(parsed);

@@ -59,6 +59,10 @@ export default function Home() {
         <div className="text-center">
           <h1 className="text-3xl font-bold tracking-tight">CalCam</h1>
           <p className="text-zinc-400 mt-2 text-sm">Snap a photo of your meal and get an instant calorie estimate</p>
+          <div className="mt-2 flex items-center justify-center gap-2 text-xs text-zinc-500">
+            <span className="inline-block w-2 h-2 rounded-full bg-zinc-600" />
+            Powered by Ollama + LLaVA — runs locally, no API key needed
+          </div>
         </div>
 
         <div className="bg-zinc-900 rounded-2xl ring-1 ring-white/10 p-6 flex flex-col gap-6">
@@ -77,6 +81,7 @@ export default function Home() {
             <div className="flex flex-col items-center gap-3 py-4">
               <div className="w-8 h-8 border-2 border-emerald-400 border-t-transparent rounded-full animate-spin" />
               <p className="text-zinc-400 text-sm">Analyzing your meal...</p>
+              <p className="text-zinc-600 text-xs">This may take 15–30s on CPU</p>
             </div>
           )}
 
