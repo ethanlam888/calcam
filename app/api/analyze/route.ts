@@ -47,7 +47,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json(parsed);
   } catch (err) {
-    console.error("Analyze error:", err);
-    return NextResponse.json({ error: "Failed to analyze image" }, { status: 500 });
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("Analyze error:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
